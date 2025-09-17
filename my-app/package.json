@@ -1,0 +1,13 @@
+{
+  "name": "multi-branch-deploy-demo",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "echo \"Running tests...\" && exit 0",
+    "build": "echo \"Building project...\" && mkdir -p dist && echo 'Build output' > dist/output.txt"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

@@ -1,0 +1,71 @@
+name: Multi-Branch Deployment
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  # 🧪 CI job (runs for PRs and pushes)
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+  # 🚧 Deploy to QA (only on dev branch push)
+  deploy_qa:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+      - name: Deploy to QA
+        run: echo "🚀 Deploying to QA environment with artifact contents:" && cat dist/output.txt
+
+  # 🌍 Deploy to Production (only on main branch push)
+  deploy_prod:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+      - name: Deploy to Production
+        run: echo "🌍 Deploying to Production environment with artifact contents:" && cat dist/output.txt
