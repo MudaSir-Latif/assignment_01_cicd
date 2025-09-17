@@ -1,4 +1,4 @@
-name: Multi-Branch Deployment
+name: Multi-Branch Environment Deployment
 
 on:
   pull_request:
@@ -10,80 +10,68 @@ on:
       - dev
 
 jobs:
-  # 🧪 CI job (runs for PRs and pushes)
-  ci:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install dependencies
         run: npm install
-
-      - name: Run lint
+      - name: Lint
         run: npm run lint
-
-      - name: Run tests
+      - name: Test
         run: npm test
-
-      - name: Build project
+      - name: Build
         run: npm run build
-
-      - name: Upload artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
+          name: build_artifact
           path: dist/
 
-  # 🚧 Deploy to QA (only on dev branch push)
-  deploy_qa:
+  deploy_to_qa:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: build_and_test
     concurrency:
-      group: deploy_qa
+      group: qa_deploy
       cancel-in-progress: true
     if: github.ref == 'refs/heads/dev'
     steps:
-      - name: Download artifact
+      - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-output
+          name: build_artifact
           path: dist/
+      - name: Deploy QA
+        run: echo "Deploying to QA with artifact:" && cat dist/output.txt
 
-      - name: Deploy to QA
-        run: echo "Deploying to QA environment with artifact contents:" && cat dist/output.txt
-
-  # Deploy to Production (only on main branch push)
-  deploy_prod:
+  deploy_to_prod:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: build_and_test
     concurrency:
-      group: deploy_prod
+      group: prod_deploy
       cancel-in-progress: true
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Download artifact
+      - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-output
+          name: build_artifact
           path: dist/
-
-      - name: Deploy to Production
-        run: echo "🌍 Deploying to Production environment with artifact contents:" && cat dist/output.txt
-
-      - name: Send email notification
+      - name: Deploy Production
+        run: echo "Deploying to Production with artifact:" && cat dist/output.txt
+      - name: Email Notification
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
-          subject: "✅ Production Deploy Successful"
+          subject: "Production Deploy Successful"
           to: ${{ secrets.EMAIL_TO }}
           from: "GitHub Actions <${{ secrets.EMAIL_USER }}>"
           body: "Production deployment for commit ${{ github.sha }} was successful!"
